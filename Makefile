@@ -213,4 +213,9 @@ clean:
 #######################################
 -include $(wildcard $(BUILD_DIR)/*.d)
 
+# Uploads the code to the board
+upload: all
+	openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
+	  -c "program $(BUILD_DIR)/$(TARGET).elf verify reset exit"
+
 # *** EOF ***
