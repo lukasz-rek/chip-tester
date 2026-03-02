@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "IProtocol.hpp"
 #include "i2c.h"
 #include "quadspi.h"
 #include "spi.h"
@@ -27,6 +28,7 @@
 /* USER CODE BEGIN Includes */
 #include "i2cProtocol.hpp"
 #include "spiProtocol.hpp"
+#include "simpleMem.hpp"
 #include <array>
 /* USER CODE END Includes */
 
@@ -99,6 +101,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   i2c i2c;
   spi spi;
+  simpleMem simpleMem;
   std::array<IProtocol*, 2> protocols = {&i2c, &spi};
 
 
@@ -127,17 +130,36 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+      IProtocol* found = NULL;
+
       printf("Trying to detect components\r\n");
-      for (IProtocol * p : protocols) {
-          if (p->check()) {
-              char buffer[32];
-              p->identify(buffer);
-              printf("Found %s with protocol %s\r\n",buffer, p->getProtocolName());
-          } else {
-              printf("Failed to find with protocol %s\r\n", p->getProtocolName());
-          }
+
+      while(found == NULL) {
+        for (IProtocol * p : protocols) {
+            if (p->check()) {
+                char buffer[32];
+                p->identify(buffer);
+                printf("Found %s with protocol %s\r\n",buffer, p->getProtocolName());
+                found = p;
+                break;
+            } else {
+                printf("Failed to find with protocol %s\r\n", p->getProtocolName());
+            }
+        }
       }
-      HAL_Delay(500);
+
+      printf("Beginning tests\r\n");
+
+      bool ret = simpleMem.validate(found);
+      if (ret) {
+          printf("\r\nTest passed\r\n");
+      } else {
+          printf("\r\nTest failed\r\n");
+      }
+
+      uint8_t ch;
+      printf("\r\nPress any key to test next component...\r\n");
+      scanf("%c", &ch);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

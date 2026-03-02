@@ -1,6 +1,7 @@
 #include "spiProtocol.hpp"
 #include "spi.h"
 #include "main.h"
+#include <cstdint>
 
 bool spi::check() {
     uint8_t txBuf[4] = {0x9F, 0x00, 0x00, 0x00};
@@ -25,4 +26,12 @@ bool spi::check() {
 }
 void spi::identify(char* buffer) {
     sprintf(buffer, "SPI device, JEDEC ID: 0x%06lX", jedecId);
+}
+
+uint8_t spi::readByte(uint32_t addr) {
+    return 0;
+}
+
+bool spi::writeByte(uint32_t addr, uint8_t data) {
+    return false;
 }
