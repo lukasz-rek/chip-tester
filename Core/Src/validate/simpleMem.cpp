@@ -1,35 +1,24 @@
 #include "validate/simpleMem.hpp"
+
 #include <cstdint>
-#include <stdio.h>
+
+#include "stdio.h"
 
 bool simpleMem::validate(IProtocol* protocol) {
-    // Read 10 bytes
+    // Just write 0x00 and 0xFF to all bytes. Check that it's there
+    for (int i = 0; i < protocol->mem_size; i++) {
+        uint8_t data;
+        bool ret = protocol->writeByte(i, 0xFF);
+        if (!ret) return false;
+        ret = protocol->readByte(i, &data);
+        if (!ret || data != 0xFF) return false;
+        ret = protocol->writeByte(i, 0x00);
+        if (!ret) return false;
+        ret = protocol->readByte(i, &data);
+        if (!ret || data != 0x00) return false;
 
-    protocol->writeByte(0, 0xAB);
-    int limit = -1;
-
-
-    for(int i = 1; i < 16384; i++) {
-
-        uint8_t read = protocol->readByte(i);
-        if (read == 0xAB) {
-            // Potentially roll over, check
-            protocol->writeByte(0, 0xCD);
-            read = protocol->readByte(i);
-            if (read == 0xCD) {
-                // Found it
-                limit = i;
-                break;
-            } else {
-                protocol->writeByte(i, 0x00);
-                protocol->writeByte(0, 0xAB);
-            }
-        }
-        printf("%#08x PASSED\r\n", i);
-
+        if (i % 512 == 0) printf("%#08x PASSED\r\n", i);
     }
-    printf("Limit found at %#08x\r\n", limit);
-
 
     return true;
 }

@@ -69,6 +69,7 @@ Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash.c \
 	CPP_SOURCES = \
 	Core/Src/protocols/i2cProtocol.cpp \
 	Core/Src/protocols/spiProtocol.cpp \
+	Core/Src/protocols/IProtocol.cpp \
 	Core/Src/validate/simpleMem.cpp \
 	Core/Src/main.cpp
 
@@ -200,3 +201,6 @@ clean:
 upload: all
 	openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
 	  -c "program $(BUILD_DIR)/$(TARGET).elf verify reset exit"
+
+format:
+	find Core -name '*.cpp' -o -name '*.hpp' | xargs clang-format -i

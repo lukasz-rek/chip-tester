@@ -1,8 +1,7 @@
 #include "IValidate.hpp"
 
 class simpleMem : IValidate {
-    public:
-
+   public:
     bool validate(IProtocol* protocol);
-    const char* getValidationName() {return "Simple Memory Read/Write" ;}
+    const char* getValidationName() { return "Simple Memory Read/Write"; }
 };

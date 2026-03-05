@@ -1,13 +1,15 @@
-#include "IProtocol.hpp"
 #include <cstdint>
 
+#include "IProtocol.hpp"
+
 class spi : public IProtocol {
-    public:
+   public:
     bool check();
-    void identify(char * buffer);
-    uint8_t readByte(uint32_t addr);
+    void getDeviceInfo(char* buffer);
+    bool readByte(uint32_t addr, uint8_t* data);
     bool writeByte(uint32_t addr, uint8_t data);
     const char* getProtocolName() { return "SPI"; }
-    private:
+
+   private:
     uint32_t jedecId = 0;
 };

@@ -1,13 +1,14 @@
-#include "IProtocol.hpp"
 #include <cstdint>
 
+#include "IProtocol.hpp"
+
 class i2c : public IProtocol {
-    public:
-    bool check();
-    void identify(char * buffer);
-    uint8_t readByte(uint32_t addr);
-    bool writeByte(uint32_t addr, uint8_t data);
-    const char* getProtocolName() { return "I2C"; }
-    private:
-    uint8_t address;
+   public:
+    bool check() override;
+    void getDeviceInfo(char* buffer) override;
+    bool readByte(uint32_t addr, uint8_t* data) override;
+    bool writeByte(uint32_t addr, uint8_t data) override;
+    const char* getProtocolName() override { return "I2C"; }
+
+   private:
 };

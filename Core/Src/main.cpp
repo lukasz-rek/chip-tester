@@ -1,35 +1,37 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2026 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2026 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+
 #include "IProtocol.hpp"
+#include "gpio.h"
 #include "i2c.h"
 #include "quadspi.h"
 #include "spi.h"
-#include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "i2cProtocol.hpp"
-#include "spiProtocol.hpp"
-#include "simpleMem.hpp"
 #include <array>
+
+#include "i2cProtocol.hpp"
+#include "simpleMem.hpp"
+#include "spiProtocol.hpp"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -67,163 +69,169 @@ void SystemClock_Config(void);
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
-int main(void)
-{
+ * @brief  The application entry point.
+ * @retval int
+ */
+int main(void) {
+    /* USER CODE BEGIN 1 */
 
-  /* USER CODE BEGIN 1 */
+    /* USER CODE END 1 */
 
-  /* USER CODE END 1 */
+    /* MCU Configuration--------------------------------------------------------*/
 
-  /* MCU Configuration--------------------------------------------------------*/
+    /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+    HAL_Init();
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+    /* USER CODE BEGIN Init */
 
-  /* USER CODE BEGIN Init */
+    /* USER CODE END Init */
 
-  /* USER CODE END Init */
+    /* Configure the system clock */
+    SystemClock_Config();
 
-  /* Configure the system clock */
-  SystemClock_Config();
+    /* USER CODE BEGIN SysInit */
 
-  /* USER CODE BEGIN SysInit */
+    /* USER CODE END SysInit */
 
-  /* USER CODE END SysInit */
+    /* Initialize all configured peripherals */
+    MX_GPIO_Init();
+    MX_QUADSPI_Init();
+    MX_I2C1_Init();
+    MX_SPI1_Init();
+    /* USER CODE BEGIN 2 */
+    i2c i2c;
+    spi spi;
+    simpleMem simpleMem;
+    std::array<IProtocol*, 2> protocols = {&i2c, &spi};
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_QUADSPI_Init();
-  MX_I2C1_Init();
-  MX_SPI1_Init();
-  /* USER CODE BEGIN 2 */
-  i2c i2c;
-  spi spi;
-  simpleMem simpleMem;
-  std::array<IProtocol*, 2> protocols = {&i2c, &spi};
+    /* USER CODE END 2 */
 
+    /* Initialize leds */
+    BSP_LED_Init(LED_GREEN);
+    BSP_LED_Init(LED_BLUE);
+    BSP_LED_Init(LED_RED);
 
-  /* USER CODE END 2 */
+    /* Initialize USER push-button, will be used to trigger an interrupt each time it's pressed.*/
+    BSP_PB_Init(BUTTON_USER, BUTTON_MODE_EXTI);
 
-  /* Initialize leds */
-  BSP_LED_Init(LED_GREEN);
-  BSP_LED_Init(LED_BLUE);
-  BSP_LED_Init(LED_RED);
+    /* Initialize COM1 port (115200, 8 bits (7-bit data + 1 stop bit), no parity */
+    BspCOMInit.BaudRate = 115200;
+    BspCOMInit.WordLength = COM_WORDLENGTH_8B;
+    BspCOMInit.StopBits = COM_STOPBITS_1;
+    BspCOMInit.Parity = COM_PARITY_NONE;
+    BspCOMInit.HwFlowCtl = COM_HWCONTROL_NONE;
+    if (BSP_COM_Init(COM1, &BspCOMInit) != BSP_ERROR_NONE) {
+        Error_Handler();
+    }
 
-  /* Initialize USER push-button, will be used to trigger an interrupt each time it's pressed.*/
-  BSP_PB_Init(BUTTON_USER, BUTTON_MODE_EXTI);
+    /* Infinite loop */
+    /* USER CODE BEGIN WHILE */
+    while (1) {
+        HAL_Delay(500);
 
-  /* Initialize COM1 port (115200, 8 bits (7-bit data + 1 stop bit), no parity */
-  BspCOMInit.BaudRate   = 115200;
-  BspCOMInit.WordLength = COM_WORDLENGTH_8B;
-  BspCOMInit.StopBits   = COM_STOPBITS_1;
-  BspCOMInit.Parity     = COM_PARITY_NONE;
-  BspCOMInit.HwFlowCtl  = COM_HWCONTROL_NONE;
-  if (BSP_COM_Init(COM1, &BspCOMInit) != BSP_ERROR_NONE)
-  {
-    Error_Handler();
-  }
+        IProtocol* found = NULL;
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-      IProtocol* found = NULL;
+        printf("Trying to detect components\r\n");
 
-      printf("Trying to detect components\r\n");
-
-      while(found == NULL) {
-        for (IProtocol * p : protocols) {
-            if (p->check()) {
-                char buffer[32];
-                p->identify(buffer);
-                printf("Found %s with protocol %s\r\n",buffer, p->getProtocolName());
-                found = p;
-                break;
-            } else {
-                printf("Failed to find with protocol %s\r\n", p->getProtocolName());
+        while (found == NULL) {
+            for (IProtocol* p : protocols) {
+                if (p->check()) {
+                    char buffer[32];
+                    p->getDeviceInfo(buffer);
+                    printf("Found %s with protocol %s\r\n", buffer, p->getProtocolName());
+                    found = p;
+                    break;
+                } else {
+                    printf("Failed to find with protocol %s\r\n", p->getProtocolName());
+                }
             }
+            HAL_Delay(500);
         }
-      }
 
-      printf("Beginning tests\r\n");
+        uint8_t ch;
 
-      bool ret = simpleMem.validate(found);
-      if (ret) {
-          printf("\r\nTest passed\r\n");
-      } else {
-          printf("\r\nTest failed\r\n");
-      }
+        printf("\r\nPress any key to begin id...\r\n");
+        HAL_UART_Receive(&hcom_uart[COM1], &ch, 1, HAL_MAX_DELAY);
 
-      uint8_t ch;
-      printf("\r\nPress any key to test next component...\r\n");
-      scanf("%c", &ch);
-    /* USER CODE END WHILE */
+        found->checkMemorySize();
+        char buffer[32];
+        found->getDeviceInfo(buffer);
+        printf("%s\r\n", buffer);
 
-    /* USER CODE BEGIN 3 */
-  }
-  /* USER CODE END 3 */
+        printf("\r\nPress any key to begin tests...\r\n");
+        HAL_UART_Receive(&hcom_uart[COM1], &ch, 1, HAL_MAX_DELAY);
+        printf("Beginning tests\r\n");
+
+        bool ret = simpleMem.validate(found);
+        if (ret) {
+            printf("\r\nTest passed\r\n");
+        } else {
+            printf("\r\nTest failed\r\n");
+        }
+
+        printf("\r\nPress any key to test next component...\r\n");
+        HAL_UART_Receive(&hcom_uart[COM1], &ch, 1, HAL_MAX_DELAY);
+        /* USER CODE END WHILE */
+
+        /* USER CODE BEGIN 3 */
+    }
+    /* USER CODE END 3 */
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
-void SystemClock_Config(void)
-{
-  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+ * @brief System Clock Configuration
+ * @retval None
+ */
+void SystemClock_Config(void) {
+    RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+    RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /** Supply configuration update enable
-  */
-  HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);
+    /** Supply configuration update enable
+     */
+    HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);
 
-  /** Configure the main internal regulator output voltage
-  */
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
+    /** Configure the main internal regulator output voltage
+     */
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
 
-  while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
+    while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {
+    }
 
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_DIV1;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM = 4;
-  RCC_OscInitStruct.PLL.PLLN = 9;
-  RCC_OscInitStruct.PLL.PLLP = 2;
-  RCC_OscInitStruct.PLL.PLLQ = 1;
-  RCC_OscInitStruct.PLL.PLLR = 2;
-  RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1VCIRANGE_3;
-  RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1VCOMEDIUM;
-  RCC_OscInitStruct.PLL.PLLFRACN = 3072;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-  {
-    Error_Handler();
-  }
+    /** Initializes the RCC Oscillators according to the specified parameters
+     * in the RCC_OscInitTypeDef structure.
+     */
+    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+    RCC_OscInitStruct.HSIState = RCC_HSI_DIV1;
+    RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+    RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+    RCC_OscInitStruct.PLL.PLLM = 4;
+    RCC_OscInitStruct.PLL.PLLN = 9;
+    RCC_OscInitStruct.PLL.PLLP = 2;
+    RCC_OscInitStruct.PLL.PLLQ = 1;
+    RCC_OscInitStruct.PLL.PLLR = 2;
+    RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1VCIRANGE_3;
+    RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1VCOMEDIUM;
+    RCC_OscInitStruct.PLL.PLLFRACN = 3072;
+    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+        Error_Handler();
+    }
 
-  /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2
-                              |RCC_CLOCKTYPE_D3PCLK1|RCC_CLOCKTYPE_D1PCLK1;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-  RCC_ClkInitStruct.SYSCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV1;
-  RCC_ClkInitStruct.APB3CLKDivider = RCC_APB3_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV1;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV1;
-  RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV1;
+    /** Initializes the CPU, AHB and APB buses clocks
+     */
+    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 |
+                                  RCC_CLOCKTYPE_PCLK2 | RCC_CLOCKTYPE_D3PCLK1 | RCC_CLOCKTYPE_D1PCLK1;
+    RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+    RCC_ClkInitStruct.SYSCLKDivider = RCC_SYSCLK_DIV1;
+    RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV1;
+    RCC_ClkInitStruct.APB3CLKDivider = RCC_APB3_DIV1;
+    RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV1;
+    RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV1;
+    RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
-  {
-    Error_Handler();
-  }
+    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK) {
+        Error_Handler();
+    }
 }
 
 /* USER CODE BEGIN 4 */
@@ -231,32 +239,29 @@ void SystemClock_Config(void)
 /* USER CODE END 4 */
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
-void Error_Handler(void)
-{
-  /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
-  while (1)
-  {
-  }
-  /* USER CODE END Error_Handler_Debug */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
+void Error_Handler(void) {
+    /* USER CODE BEGIN Error_Handler_Debug */
+    /* User can add his own implementation to report the HAL error return state */
+    __disable_irq();
+    while (1) {
+    }
+    /* USER CODE END Error_Handler_Debug */
 }
 #ifdef USE_FULL_ASSERT
 /**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
-void assert_failed(uint8_t *file, uint32_t line)
-{
-  /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-  /* USER CODE END 6 */
+ * @brief  Reports the name of the source file and the source line number
+ *         where the assert_param error has occurred.
+ * @param  file: pointer to the source file name
+ * @param  line: assert_param error line source number
+ * @retval None
+ */
+void assert_failed(uint8_t* file, uint32_t line) {
+    /* USER CODE BEGIN 6 */
+    /* User can add his own implementation to report the file name and line number,
+       ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+    /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
