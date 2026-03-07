@@ -130,28 +130,33 @@ int main(void) {
         HAL_Delay(500);
 
         IProtocol* found = NULL;
+        uint8_t ch;
 
         printf("Trying to detect components\r\n");
 
-        while (found == NULL) {
+        while (true) {
             for (IProtocol* p : protocols) {
+                p->enable();
                 if (p->check()) {
-                    char buffer[32];
+                    char buffer[128];
                     p->getDeviceInfo(buffer);
                     printf("Found %s with protocol %s\r\n", buffer, p->getProtocolName());
                     found = p;
                     break;
                 } else {
                     printf("Failed to find with protocol %s\r\n", p->getProtocolName());
+                    p->disable();
                 }
             }
-            HAL_Delay(500);
+            if (found == NULL) continue;
+            printf("\r\nPress s to begin, any other to try selecting again...\r\n");
+            HAL_UART_Receive(&hcom_uart[COM1], &ch, 1, HAL_MAX_DELAY);
+            if (ch == 's') {
+                break;
+            }
+            found->disable();
+            found = NULL;
         }
-
-        uint8_t ch;
-
-        printf("\r\nPress any key to begin id...\r\n");
-        HAL_UART_Receive(&hcom_uart[COM1], &ch, 1, HAL_MAX_DELAY);
 
         found->checkMemorySize();
         char buffer[32];

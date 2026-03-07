@@ -4,6 +4,7 @@
 
 #include "main.h"
 #include "spi.h"
+#include "stm32h7xx_hal_spi.h"
 
 bool spi::check() {
     uint8_t txBuf[4] = {0x9F, 0x00, 0x00, 0x00};
@@ -27,6 +28,9 @@ bool spi::check() {
     return false;
 }
 void spi::getDeviceInfo(char* buffer) { sprintf(buffer, "SPI device, JEDEC ID: 0x%06lX", jedecId); }
+
+void spi::enable() {}
+void spi::disable() {}
 
 bool spi::readByte(uint32_t addr, uint8_t* data) { return 0; }
 

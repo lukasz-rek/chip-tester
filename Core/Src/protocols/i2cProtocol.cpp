@@ -5,6 +5,7 @@
 #include <cstdint>
 
 #include "i2c.h"
+#include "stm32h7xx_hal_i2c.h"
 
 bool i2c::check() {
     for (uint8_t addr = 1; addr < 128; addr++) {
@@ -17,7 +18,16 @@ bool i2c::check() {
 }
 
 void i2c::getDeviceInfo(char* buffer) {
-    sprintf(buffer, "I2C device at address: 0x%02X with mem size %d", i2c::address, i2c::mem_size);
+    sprintf(buffer, "I2C device at address: 0x%02X with mem size %d bytes", i2c::address, i2c::mem_size);
+}
+
+void i2c::enable() { MX_I2C1_Init(); }
+
+void i2c::disable() {
+    __HAL_I2C_DISABLE(&hi2c1);
+    HAL_I2C_DeInit(&hi2c1);
+    hi2c1.State = HAL_I2C_STATE_RESET;
+    hi2c1.Lock = HAL_UNLOCKED;
 }
 
 bool i2c::readByte(uint32_t addr, uint8_t* data) {

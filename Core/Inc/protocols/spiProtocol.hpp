@@ -4,11 +4,13 @@
 
 class spi : public IProtocol {
    public:
-    bool check();
-    void getDeviceInfo(char* buffer);
-    bool readByte(uint32_t addr, uint8_t* data);
-    bool writeByte(uint32_t addr, uint8_t data);
-    const char* getProtocolName() { return "SPI"; }
+    bool check() override;
+    void getDeviceInfo(char* buffer) override;
+    bool readByte(uint32_t addr, uint8_t* data) override;
+    bool writeByte(uint32_t addr, uint8_t data) override;
+    void enable() override;
+    void disable() override;
+    const char* getProtocolName() override { return "SPI"; }
 
    private:
     uint32_t jedecId = 0;

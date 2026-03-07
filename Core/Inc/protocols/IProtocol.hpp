@@ -12,6 +12,8 @@ class IProtocol {
     virtual void getDeviceInfo(char* buffer) = 0;
     /// Get name id'ing this protocol
     virtual const char* getProtocolName() = 0;
+    virtual void enable() = 0;
+    virtual void disable() = 0;
 
     /// Checks memory size, should store it internally
     virtual bool checkMemorySize();
