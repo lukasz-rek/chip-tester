@@ -10,6 +10,7 @@ class i2c : public IProtocol {
     bool writeByte(uint32_t addr, uint8_t data) override;
     void enable() override;
     void disable() override;
+    bool eraseSector(uint32_t addr) override;
     const char* getProtocolName() override { return "I2C"; }
 
    private:

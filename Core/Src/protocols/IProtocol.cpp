@@ -9,8 +9,9 @@ bool IProtocol::checkMemorySize() {
     }
 
     int limit = -1;
+    long i = 1;
 
-    for (int i = 1; i < 16384; i++) {
+    while (i > 0) {
         uint8_t read;
         if (!readByte(i, &read)) {
             printf("Failed to read byte at %#08x\r\n", i);
@@ -30,8 +31,20 @@ bool IProtocol::checkMemorySize() {
             }
         }
         if (i % 512 == 0) printf("%#08x PASSED\r\n", i);
+        i++;
     }
     mem_size = limit;
     printf("Limit found at %#08x\r\n", limit);
     return true;
+}
+
+bool IProtocol::detectFlash()
+{
+    // Write 0x00 to byte 0, then try writing 0xFF back
+    writeByte(0, 0x00);
+    writeByte(0, 0xFF);
+    uint8_t read;
+    readByte(0, &read);
+    needsErase = (read == 0x00);  // couldn't go back to 0xFF → flash
+    return needsErase;
 }

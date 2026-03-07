@@ -18,10 +18,15 @@ class IProtocol {
     /// Checks memory size, should store it internally
     virtual bool checkMemorySize();
 
+    virtual bool detectFlash();
+    virtual bool eraseSector(uint32_t addr) = 0;
+
     virtual bool readByte(uint32_t addr, uint8_t* data) = 0;
     virtual bool writeByte(uint32_t addr, uint8_t data) = 0;
 
     uint8_t address;
     uint32_t mem_size;
+    bool needsErase = false;
+    int32_t lastErasedSector = -1;
     ic_type_t ic_type;
 };

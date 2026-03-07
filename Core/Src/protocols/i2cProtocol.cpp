@@ -17,6 +17,10 @@ bool i2c::check() {
     return false;
 }
 
+bool i2c::eraseSector(uint32_t addr) {
+    return false;
+}
+
 void i2c::getDeviceInfo(char* buffer) {
     sprintf(buffer, "I2C device at address: 0x%02X with mem size %d bytes", i2c::address, i2c::mem_size);
 }
