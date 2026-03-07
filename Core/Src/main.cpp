@@ -108,7 +108,7 @@ int main(void) {
 
     /* Initialize leds */
     BSP_LED_Init(LED_GREEN);
-    BSP_LED_Init(LED_BLUE);
+    BSP_LED_Init(LED_YELLOW);
     BSP_LED_Init(LED_RED);
 
     /* Initialize USER push-button, will be used to trigger an interrupt each time it's pressed.*/
@@ -133,76 +133,7 @@ int main(void) {
         uint8_t ch;
 
 
-        printf("=== SPI FULL DIAGNOSTIC v2 ===\r\n");
 
-        auto read_sr = [&]() -> uint8_t {
-            uint8_t tx[2] = {0x05, 0x00};
-            uint8_t rx[2] = {0};
-            HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
-            HAL_SPI_TransmitReceive(&hspi1, tx, rx, 2, 100);
-            HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
-            return rx[1];
-        };
-
-        auto send_wren = [&]() {
-            uint8_t tx = 0x06;
-            uint8_t rx = 0;
-            HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
-            HAL_SPI_TransmitReceive(&hspi1, &tx, &rx, 1, 100);
-            HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
-        };
-
-        // 1. Initial SR
-        uint8_t sr = read_sr();
-        printf("SR initial: 0x%02X\r\n", sr);
-
-        // 2. WREN latch test
-        send_wren();
-        sr = read_sr();
-        printf("SR after WREN: 0x%02X (WEL=%d, MUST be 1)\r\n", sr, (sr >> 1) & 1);
-
-        if (!((sr >> 1) & 1)) {
-            printf("WREN STILL NOT LATCHING — hardware issue\r\n");
-            printf("=== END DIAGNOSTIC ===\r\n");
-        }
-
-        // 3. Erase sector 0
-        // printf("Erasing sector 0...\r\n");
-        // send_wren();
-        // uint8_t etx[4] = {0x20, 0x00, 0x00, 0x00};
-        // uint8_t erx[4] = {0};
-        // HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
-        // HAL_SPI_TransmitReceive(&hspi1, etx, erx, 4, 100);
-        // HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
-        // HAL_Delay(500);
-        // sr = read_sr();
-        // printf("SR after erase: 0x%02X (WIP should be 0)\r\n", sr);
-
-        // uint8_t val;
-        // spi.readByte(0, &val);
-        // printf("After erase: 0x%02X (expect 0xFF)\r\n", val);
-
-        // // 4. Write 0xAB to addr 0
-        // printf("Writing 0xAB...\r\n");
-        // send_wren();
-        // sr = read_sr();
-        // printf("SR before write: 0x%02X (WEL=%d)\r\n", sr, (sr >> 1) & 1);
-
-        // uint8_t wtx[5] = {0x02, 0x00, 0x00, 0x00, 0xAB};
-        // uint8_t wrx[5] = {0};
-        // HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
-        // HAL_StatusTypeDef ret = HAL_SPI_TransmitReceive(&hspi1, wtx, wrx, 5, 100);
-        // HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
-        // printf("TransmitReceive returned: %d\r\n", ret);
-
-        // HAL_Delay(10);
-        // sr = read_sr();
-        // printf("SR after write: 0x%02X\r\n", sr);
-
-        // spi.readByte(0, &val);
-        // printf("Read back: 0x%02X (expect 0xAB)\r\n", val);
-
-        // printf("=== END DIAGNOSTIC v2 ===\r\n");
 
         printf("Trying to detect components\r\n");
 
@@ -234,9 +165,9 @@ int main(void) {
         char buffer[128];
         found->getDeviceInfo(buffer);
         printf("%s\r\n", buffer);
-        if (found->detectFlash()) {
-            printf("Flash detected, will apply sector erase!\r\n");
-        }
+        // if (found->detectFlash()) {
+        //     printf("Flash detected, will apply sector erase!\r\n");
+        // }
 
         printf("\r\nPress any key to begin tests...\r\n");
         HAL_UART_Receive(&hcom_uart[COM1], &ch, 1, HAL_MAX_DELAY);
