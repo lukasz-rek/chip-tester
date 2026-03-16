@@ -1,13 +1,14 @@
-#include "sramSpiProtcol.hpp"
 #include <stdint.h>
+
 #include <cstdint>
 #include <cstdio>
+
 #include "main.h"
 #include "spi.h"
+#include "sramSpiProtcol.hpp"
 #include "stm32h7xx_hal_spi.h"
 
-bool sramSpi::check()
-{
+bool sramSpi::check() {
     // Reset peripheral state left by previous protocol attempts or our own last run
     HAL_SPI_Abort(&hspi1);
     __HAL_SPI_CLEAR_OVRFLAG(&hspi1);
@@ -39,8 +40,7 @@ bool sramSpi::check()
     return false;
 }
 
-void sramSpi::getDeviceInfo(char* buffer)
-{
+void sramSpi::getDeviceInfo(char* buffer) {
     // uint8_t tx[2] = {0x05, 0x00};
     // uint8_t rx[2] = {0};
     // HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
@@ -50,8 +50,7 @@ void sramSpi::getDeviceInfo(char* buffer)
     sprintf(buffer, "Microchip 23K256 SPI SRAM | size: %lu bytes", mem_size);
 }
 
-bool sramSpi::readByte(uint32_t addr, uint8_t* data)
-{
+bool sramSpi::readByte(uint32_t addr, uint8_t* data) {
     uint8_t tx[4] = {0x03, (uint8_t)(addr >> 8), (uint8_t)(addr & 0xFF), 0x00};
     uint8_t rx[4] = {0};
     HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
@@ -61,8 +60,7 @@ bool sramSpi::readByte(uint32_t addr, uint8_t* data)
     return ret == HAL_OK;
 }
 
-bool sramSpi::writeByte(uint32_t addr, uint8_t data)
-{
+bool sramSpi::writeByte(uint32_t addr, uint8_t data) {
     uint8_t tx[4] = {0x02, (uint8_t)(addr >> 8), (uint8_t)(addr & 0xFF), data};
     HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
     HAL_StatusTypeDef ret = HAL_SPI_Transmit(&hspi1, tx, 4, 100);
@@ -70,5 +68,5 @@ bool sramSpi::writeByte(uint32_t addr, uint8_t data)
     return ret == HAL_OK;
 }
 
-void sramSpi::enable()  {}
+void sramSpi::enable() {}
 void sramSpi::disable() {}

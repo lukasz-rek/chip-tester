@@ -81,8 +81,7 @@ void destroyByte(IProtocol* flash, uint32_t addr) {
 
         cycles++;
 
-        if (cycles % 1000 == 0)
-            printf("Cycles: %lu\r\n", cycles);
+        if (cycles % 1000 == 0) printf("Cycles: %lu\r\n", cycles);
 
         if (readBack != 0xA5) {
             printf("\033[31mCell failed after %lu cycles — read back 0x%02X\033[0m\r\n", cycles, readBack);
@@ -96,11 +95,17 @@ void runDestroyByte(IProtocol* flash) {
     printf("\033[31m\r\nWARNING: About to permanently destroy byte at target address!\033[0m\r\n");
     printf("\033[31mThis will wear out the flash cell until it fails. Press 'y' to confirm.\033[0m\r\n");
     HAL_UART_Receive(&hcom_uart[COM1], &ch, 1, HAL_MAX_DELAY);
-    if (ch != 'y') { printf("Aborted.\r\n"); return; }
+    if (ch != 'y') {
+        printf("Aborted.\r\n");
+        return;
+    }
 
     printf("\033[31mAre you sure? Press 'y' again to begin destruction.\033[0m\r\n");
     HAL_UART_Receive(&hcom_uart[COM1], &ch, 1, HAL_MAX_DELAY);
-    if (ch != 'y') { printf("Aborted.\r\n"); return; }
+    if (ch != 'y') {
+        printf("Aborted.\r\n");
+        return;
+    }
 
     destroyByte(flash, 0x001000);
 }
@@ -113,6 +118,9 @@ void runDestroyByte(IProtocol* flash) {
  */
 int main(void) {
     /* USER CODE BEGIN 1 */
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CYCCNT = 0;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
     /* USER CODE END 1 */
 
@@ -171,9 +179,6 @@ int main(void) {
 
         IProtocol* found = NULL;
         uint8_t ch;
-
-
-
 
         printf("Trying to detect components\r\n");
 

@@ -1,7 +1,19 @@
 #pragma once
 #include <stdint.h>
+#include <cstdint>
 
 enum ic_type_t { memory, clock, security, other };
+
+typedef struct ProtocolTiming {
+    uint32_t total_program_cycles = 0;  // Avg. of this should degrade
+    uint32_t min_cycles = UINT32_MAX, max_cycles = 0;
+
+
+    uint32_t readByteTransactions = 0;
+    uint32_t writeByteTransactions = 0;
+    uint32_t eraseSectorTransactions = 0;
+
+} protocol_timing_t;
 
 class IProtocol {
    public:
@@ -14,6 +26,10 @@ class IProtocol {
     virtual const char* getProtocolName() = 0;
     virtual void enable() = 0;
     virtual void disable() = 0;
+
+    // Timing read/reset
+    virtual protocol_timing_t get_timings();
+    virtual void reset_timings();
 
     /// Checks memory size, should store it internally
     virtual bool checkMemorySize();
@@ -28,5 +44,6 @@ class IProtocol {
     uint32_t mem_size;
     bool needsErase = false;
     int32_t lastErasedSector = -1;
+    protocol_timing_t recorded_timings;
     ic_type_t ic_type;
 };

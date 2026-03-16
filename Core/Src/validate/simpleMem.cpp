@@ -1,11 +1,12 @@
 #include "validate/simpleMem.hpp"
-
+#include "stm32h7xx.h"
 #include <cstdint>
 
+#include "IProtocol.hpp"
 #include "stdio.h"
 
-bool simpleMem::validate(IProtocol* protocol)
-{
+bool simpleMem::validate(IProtocol* protocol) {
+    protocol->reset_timings();
     if (protocol->needsErase) {
         uint32_t sector_size = 4096;
         uint32_t num_sectors = protocol->mem_size / sector_size;
@@ -64,14 +65,27 @@ bool simpleMem::validate(IProtocol* protocol)
                     return false;
                 }
                 if (data != 0xFF) {
-                    printf("re-erase verify failed at %#08lx+%lu: got 0x%02X (cell may be worn)\r\n",
-                           base, i, data);
+                    printf("re-erase verify failed at %#08lx+%lu: got 0x%02X (cell may be worn)\r\n", base, i, data);
                     return false;
                 }
             }
 
-            if (s % 16 == 0)
-                printf("sector %lu/%lu OK\r\n", s, num_sectors);
+
+
+            if (s % 16 == 0) {
+                printf("sector %d/%d OK\r\n", s, num_sectors);
+            }
+            protocol_timing_t timings = protocol->get_timings();
+
+            float avg_cycles = (float)timings.total_program_cycles / timings.writeByteTransactions;
+            float avg_us = avg_cycles / (SystemCoreClock / 1000000.0f);
+            printf("== No. %d AVG: %.2f us (%.0f cycles), max: %.2f us, min: %.2f us\r\n",
+                s,
+                avg_us,
+                avg_cycles,
+                (float)timings.max_cycles / (SystemCoreClock / 1000000.0f),
+                (float)timings.min_cycles / (SystemCoreClock / 1000000.0f));
+            protocol->reset_timings();
         }
     } else {
         // EEPROM/SRAM: byte-by-byte 0xFF ↔ 0x00
@@ -81,7 +95,20 @@ bool simpleMem::validate(IProtocol* protocol)
             if (!protocol->readByte(i, &data) || data != 0xFF) return false;
             if (!protocol->writeByte(i, 0x00)) return false;
             if (!protocol->readByte(i, &data) || data != 0x00) return false;
-            if (i % 512 == 0) printf("%#08x PASSED\r\n", i);
+            if (i % 512 == 0) {
+                printf("%#08x PASSED\r\n", i);
+                protocol_timing_t timings = protocol->get_timings();
+
+                float avg_cycles = (float)timings.total_program_cycles / timings.writeByteTransactions;
+                float avg_us = avg_cycles / (SystemCoreClock / 1000000.0f);
+                printf("== No. %d AVG: %.2f us (%.0f cycles), max: %.2f us, min: %.2f us\r\n",
+                    i,
+                    avg_us,
+                    avg_cycles,
+                    (float)timings.max_cycles / (SystemCoreClock / 1000000.0f),
+                    (float)timings.min_cycles / (SystemCoreClock / 1000000.0f));
+                protocol->reset_timings();
+            }
         }
     }
     // If we reached end, we good.

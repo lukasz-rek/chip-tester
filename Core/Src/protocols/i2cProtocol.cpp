@@ -17,9 +17,7 @@ bool i2c::check() {
     return false;
 }
 
-bool i2c::eraseSector(uint32_t addr) {
-    return false;
-}
+bool i2c::eraseSector(uint32_t addr) { return false; }
 
 void i2c::getDeviceInfo(char* buffer) {
     sprintf(buffer, "I2C device at address: 0x%02X with mem size %d bytes", i2c::address, i2c::mem_size);
@@ -62,6 +60,17 @@ bool i2c::readByte(uint32_t addr, uint8_t* data) {
 bool i2c::writeByte(uint32_t addr, uint8_t data) {
     HAL_StatusTypeDef ret =
         HAL_I2C_Mem_Write(&hi2c1, i2c::address << 1, addr, I2C_MEMADD_SIZE_16BIT, &data, 1, HAL_MAX_DELAY);
-    HAL_Delay(5);
-    return ret == HAL_OK;
+
+    if (ret != HAL_OK) return false;
+
+    uint32_t p0 = DWT->CYCCNT;
+    while (HAL_I2C_IsDeviceReady(&hi2c1, i2c::address << 1, 1, 10) != HAL_OK);
+    uint32_t write_cycles = DWT->CYCCNT - p0;
+
+    recorded_timings.total_program_cycles += write_cycles;
+    if (write_cycles < recorded_timings.min_cycles) recorded_timings.min_cycles = write_cycles;
+    if (write_cycles > recorded_timings.max_cycles) recorded_timings.max_cycles = write_cycles;
+    recorded_timings.writeByteTransactions++;
+
+    return true;
 }

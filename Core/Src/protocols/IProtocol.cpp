@@ -1,4 +1,5 @@
 #include "IProtocol.hpp"
+
 #include <cstdint>
 
 #include "stdio.h"
@@ -39,13 +40,19 @@ bool IProtocol::checkMemorySize() {
     return true;
 }
 
-bool IProtocol::eraseSector(uint32_t sector) {
-    return false;
+bool IProtocol::eraseSector(uint32_t sector) { return false; }
+
+
+protocol_timing_t IProtocol::get_timings() {
+    return recorded_timings;
 }
 
+void IProtocol::reset_timings() {
+    recorded_timings = {};
+    recorded_timings.min_cycles = INT32_MAX;
+}
 
-bool IProtocol::detectFlash()
-{
+bool IProtocol::detectFlash() {
     // Write 0x00 to byte 0, then try writing 0xFF back
     writeByte(0, 0x00);
     writeByte(0, 0xFF);

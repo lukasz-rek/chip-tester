@@ -1,4 +1,5 @@
 #include "spiProtocol.hpp"
+
 #include <stdint.h>
 
 #include <cstdint>
@@ -25,16 +26,16 @@ bool spi::check() {
         HAL_Delay(1);
     }
 
-
     return false;
 }
-void spi::getDeviceInfo(char* buffer) { sprintf(buffer, "SPI device, JEDEC ID: 0x%06lX, mem size: %d bytes", jedecId, mem_size); }
+void spi::getDeviceInfo(char* buffer) {
+    sprintf(buffer, "SPI device, JEDEC ID: 0x%06lX, mem size: %d bytes", jedecId, mem_size);
+}
 
 void spi::enable() {}
 void spi::disable() {}
 
-bool spi::readByte(uint32_t addr, uint8_t* data)
-{
+bool spi::readByte(uint32_t addr, uint8_t* data) {
     uint8_t tx[5] = {0x03, (uint8_t)(addr >> 16), (uint8_t)(addr >> 8), (uint8_t)(addr & 0xFF), 0x00};
     uint8_t rx[5] = {0};
 
@@ -46,8 +47,7 @@ bool spi::readByte(uint32_t addr, uint8_t* data)
     return ret == HAL_OK;
 }
 
-bool spi::writeByte(uint32_t addr, uint8_t data)
-{
+bool spi::writeByte(uint32_t addr, uint8_t data) {
     uint8_t wren = 0x06;
     HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
     HAL_SPI_Transmit(&hspi1, &wren, 1, 100);
@@ -55,25 +55,35 @@ bool spi::writeByte(uint32_t addr, uint8_t data)
 
     uint8_t tx[5] = {0x02, (uint8_t)(addr >> 16), (uint8_t)(addr >> 8), (uint8_t)(addr & 0xFF), data};
     HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
-    HAL_StatusTypeDef ret = HAL_SPI_Transmit(&hspi1, tx, 5, 100);  // <-- 5 NOT 4
+    HAL_StatusTypeDef ret = HAL_SPI_Transmit(&hspi1, tx, 5, 100);
     HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
 
     if (ret != HAL_OK) return false;
 
+    uint32_t p0 = DWT->CYCCNT;
+    uint8_t sr_tx[2] = {0x05, 0x00};
+    uint8_t sr_rx[2] = {0};
     uint32_t start = HAL_GetTick();
+
     while ((HAL_GetTick() - start) < 10) {
-        uint8_t sr_tx[2] = {0x05, 0x00};
-        uint8_t sr_rx[2] = {0};
         HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
         HAL_SPI_TransmitReceive(&hspi1, sr_tx, sr_rx, 2, 100);
         HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);
-        if (!(sr_rx[1] & 0x01)) return true;
+
+        if (!(sr_rx[1] & 0x01)) {
+            uint32_t program_cycles = DWT->CYCCNT - p0;
+            recorded_timings.total_program_cycles += program_cycles;
+            if (program_cycles < recorded_timings.min_cycles) recorded_timings.min_cycles = program_cycles;
+            if (program_cycles > recorded_timings.max_cycles) recorded_timings.max_cycles = program_cycles;
+            recorded_timings.writeByteTransactions++;
+            return true;
+        }
     }
-    return false;
+
+    return false;  // timeout — don't record, cell may be stuck
 }
 
-bool spi::eraseSector(uint32_t addr)
-{
+bool spi::eraseSector(uint32_t addr) {
     uint8_t wren = 0x06;
     HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
     HAL_SPI_Transmit(&hspi1, &wren, 1, 100);
@@ -105,7 +115,6 @@ bool spi::checkMemorySize() {
     HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);  // CS LOW
     HAL_SPI_TransmitReceive(&hspi1, txBuf, rxBuf, 4, 10);
     HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);  // CS HIGH
-
 
     mem_size = 1UL << rxBuf[3];
     return true;
