@@ -1,0 +1,19 @@
+#include <cstdint>
+
+#include "IProtocol.hpp"
+
+class spi : public IProtocol {
+   public:
+    bool check() override;
+    void getDeviceInfo(char* buffer) override;
+    bool readByte(uint32_t addr, uint8_t* data) override;
+    bool writeByte(uint32_t addr, uint8_t data) override;
+    void enable() override;
+    void disable() override;
+    bool checkMemorySize() override;
+    bool eraseSector(uint32_t addr) override;
+    const char* getProtocolName() override { return "SPI"; }
+
+   private:
+    uint32_t jedecId = 0;
+};
