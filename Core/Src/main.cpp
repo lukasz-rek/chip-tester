@@ -32,6 +32,8 @@
 #include "i2cProtocol.hpp"
 #include "simpleMem.hpp"
 #include "spiProtocol.hpp"
+#include "sramSpiProtcol.hpp"
+#include "stm32h7xx_hal.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -65,6 +67,43 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void destroyByte(IProtocol* flash, uint32_t addr) {
+    uint32_t sectorAddr = addr & ~0xFFF;
+    unsigned long cycles = 0;
+    printf("Destroying byte at 0x%06lX (sector 0x%06lX)\r\n", addr, sectorAddr);
+
+    while (true) {
+        flash->eraseSector(sectorAddr);
+        flash->writeByte(addr, 0xA5);
+
+        uint8_t readBack = 0;
+        flash->readByte(addr, &readBack);
+
+        cycles++;
+
+        if (cycles % 1000 == 0)
+            printf("Cycles: %lu\r\n", cycles);
+
+        if (readBack != 0xA5) {
+            printf("\033[31mCell failed after %lu cycles — read back 0x%02X\033[0m\r\n", cycles, readBack);
+            return;
+        }
+    }
+}
+
+void runDestroyByte(IProtocol* flash) {
+    uint8_t ch;
+    printf("\033[31m\r\nWARNING: About to permanently destroy byte at target address!\033[0m\r\n");
+    printf("\033[31mThis will wear out the flash cell until it fails. Press 'y' to confirm.\033[0m\r\n");
+    HAL_UART_Receive(&hcom_uart[COM1], &ch, 1, HAL_MAX_DELAY);
+    if (ch != 'y') { printf("Aborted.\r\n"); return; }
+
+    printf("\033[31mAre you sure? Press 'y' again to begin destruction.\033[0m\r\n");
+    HAL_UART_Receive(&hcom_uart[COM1], &ch, 1, HAL_MAX_DELAY);
+    if (ch != 'y') { printf("Aborted.\r\n"); return; }
+
+    destroyByte(flash, 0x001000);
+}
 
 /* USER CODE END 0 */
 
@@ -101,8 +140,9 @@ int main(void) {
     /* USER CODE BEGIN 2 */
     i2c i2c;
     spi spi;
+    sramSpi sramSpi;
     simpleMem simpleMem;
-    std::array<IProtocol*, 2> protocols = {&i2c, &spi};
+    std::array<IProtocol*, 3> protocols = {&i2c, &spi, &sramSpi};
 
     /* USER CODE END 2 */
 
@@ -150,6 +190,7 @@ int main(void) {
                     printf("Failed to find with protocol %s\r\n", p->getProtocolName());
                     p->disable();
                 }
+                HAL_Delay(500);
             }
             if (found == NULL) continue;
             printf("\r\nPress s to begin, any other to try selecting again...\r\n");
@@ -168,6 +209,8 @@ int main(void) {
         // if (found->detectFlash()) {
         //     printf("Flash detected, will apply sector erase!\r\n");
         // }
+
+        // runDestroyByte(found);
 
         printf("\r\nPress any key to begin tests...\r\n");
         HAL_UART_Receive(&hcom_uart[COM1], &ch, 1, HAL_MAX_DELAY);

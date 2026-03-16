@@ -19,7 +19,7 @@ class IProtocol {
     virtual bool checkMemorySize();
 
     virtual bool detectFlash();
-    virtual bool eraseSector(uint32_t addr) = 0;
+    virtual bool eraseSector(uint32_t addr);
 
     virtual bool readByte(uint32_t addr, uint8_t* data) = 0;
     virtual bool writeByte(uint32_t addr, uint8_t data) = 0;

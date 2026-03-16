@@ -71,6 +71,7 @@ Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash.c \
 	Core/Src/protocols/i2cProtocol.cpp \
 	Core/Src/protocols/spiProtocol.cpp \
 	Core/Src/protocols/IProtocol.cpp \
+	Core/Src/protocols/sramSpiProtocol.cpp \
 	Core/Src/validate/simpleMem.cpp \
 	Core/Src/main.cpp
 

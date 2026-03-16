@@ -1,4 +1,5 @@
 #include "spiProtocol.hpp"
+#include <stdint.h>
 
 #include <cstdint>
 
@@ -18,11 +19,13 @@ bool spi::check() {
         uint8_t capacity = rxBuf[3];
         if (manuf == 0x68 && memType == 0x10 && capacity == 0x15) {
             jedecId = (manuf << 16) | (memType << 8) | capacity;
-            needsErase = true;  // <-- ADD THIS
+            needsErase = true;
             return true;
         }
         HAL_Delay(1);
     }
+
+
     return false;
 }
 void spi::getDeviceInfo(char* buffer) { sprintf(buffer, "SPI device, JEDEC ID: 0x%06lX, mem size: %d bytes", jedecId, mem_size); }

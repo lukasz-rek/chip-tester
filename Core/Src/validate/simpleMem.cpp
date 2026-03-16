@@ -7,37 +7,68 @@
 bool simpleMem::validate(IProtocol* protocol)
 {
     if (protocol->needsErase) {
-        // Flash: test per-sector
         uint32_t sector_size = 4096;
         uint32_t num_sectors = protocol->mem_size / sector_size;
 
         for (uint32_t s = 0; s < num_sectors; s++) {
             uint32_t base = s * sector_size;
 
-            // Erase sets everything to 0xFF
+            // --- ERASE ---
             if (!protocol->eraseSector(base)) {
-                        printf("erase failed at %#08lx\r\n", base);
-                        return false;
-                    }
+                printf("erase failed at %#08lx\r\n", base);
+                return false;
+            }
 
-            // Verify first and last byte are 0xFF
-            uint8_t data;
-            if (!protocol->readByte(base, &data)) {
-                        printf("read failed at %#08lx\r\n", base);
-                        return false;
-                    }
-            if (data != 0xFF) {
-                       printf("erase verify failed at %#08lx: got 0x%02X\r\n", base, data);
-                       return false;
-                   }
-            if (!protocol->readByte(base + sector_size - 1, &data) || data != 0xFF) return false;
+            // --- VERIFY ERASE: full sector must be 0xFF ---
+            for (uint32_t i = 0; i < sector_size; i++) {
+                uint8_t data;
+                if (!protocol->readByte(base + i, &data)) {
+                    printf("read failed at %#08lx\r\n", base + i);
+                    return false;
+                }
+                if (data != 0xFF) {
+                    printf("erase verify failed at %#08lx+%lu: got 0x%02X\r\n", base, i, data);
+                    return false;
+                }
+            }
 
-            // Write 0x00, verify (1→0, always works on flash)
+            // --- WRITE: program first and last byte (1→0 always valid on flash) ---
             if (!protocol->writeByte(base, 0x00)) return false;
-            if (!protocol->readByte(base, &data) || data != 0x00) return false;
-
+            {
+                uint8_t data;
+                if (!protocol->readByte(base, &data) || data != 0x00) {
+                    printf("write verify failed at %#08lx\r\n", base);
+                    return false;
+                }
+            }
             if (!protocol->writeByte(base + sector_size - 1, 0x55)) return false;
-            if (!protocol->readByte(base + sector_size - 1, &data) || data != 0x55) return false;
+            {
+                uint8_t data;
+                if (!protocol->readByte(base + sector_size - 1, &data) || data != 0x55) {
+                    printf("write verify failed at %#08lx\r\n", base + sector_size - 1);
+                    return false;
+                }
+            }
+
+            // --- RE-ERASE to restore ---
+            if (!protocol->eraseSector(base)) {
+                printf("re-erase failed at %#08lx\r\n", base);
+                return false;
+            }
+
+            // --- VERIFY RE-ERASE: confirm all bytes back to 0xFF ---
+            for (uint32_t i = 0; i < sector_size; i++) {
+                uint8_t data;
+                if (!protocol->readByte(base + i, &data)) {
+                    printf("read failed at %#08lx\r\n", base + i);
+                    return false;
+                }
+                if (data != 0xFF) {
+                    printf("re-erase verify failed at %#08lx+%lu: got 0x%02X (cell may be worn)\r\n",
+                           base, i, data);
+                    return false;
+                }
+            }
 
             if (s % 16 == 0)
                 printf("sector %lu/%lu OK\r\n", s, num_sectors);

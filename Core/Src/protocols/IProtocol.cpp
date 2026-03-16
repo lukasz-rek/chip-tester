@@ -1,4 +1,5 @@
 #include "IProtocol.hpp"
+#include <cstdint>
 
 #include "stdio.h"
 bool IProtocol::checkMemorySize() {
@@ -37,6 +38,11 @@ bool IProtocol::checkMemorySize() {
     printf("Limit found at %#08x\r\n", limit);
     return true;
 }
+
+bool IProtocol::eraseSector(uint32_t sector) {
+    return false;
+}
+
 
 bool IProtocol::detectFlash()
 {
